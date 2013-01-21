@@ -37,13 +37,11 @@ root {
 }
 
 #upload-file-container {
-   background: url(images/custom-file-input.png) no-repeat;
-   background-color: black;
+   
 }
 
 #upload-file-container input {
-   opacity: 100;
-   filter: alpha(opacity =50);
+  
 }
 
 table {
@@ -54,4 +52,21 @@ table {
     border-width: 1px;
     border-style: solid;
     border-color: #000000;
+}
+
+#divEditionAffichageCommentaires
+{
+    position: relative;
+    top: 0px;
+    left: 60%;
+    width: 35%;
+    right: 5%;
+    height: 525px;
+}
+
+#divCommentaires
+{
+    overflow: auto;
+    height: 78%;
+    width: 100%
 }

@@ -130,6 +130,7 @@ function ajouterALHistorique(id, nom)
 {
     niveauArborescence++;
     document.getElementById("ligneHistorique").innerHTML += "<li> <a href='javascript:genererPage(\"" + id + "\");javascript:reformuler(" + niveauArborescence + ");'>" + nom + "</a> <span class=\"divider\">/</span> </li>";
+    enregistrerArborescenceParcourue(nom);
 }
 
 function reformuler(place)
@@ -142,11 +143,15 @@ function reformuler(place)
 
     if(nombreEnfant == place) continuer = false;
 
+    var tableauArboparcourue = recupererArborescenceParcourue().split(";");
+
     // Tant que cette variable est à vrai
     while(continuer == true)
     {
         // On supprime la dernière cellule de l'historique
         document.getElementById("ligneHistorique").removeChild(document.getElementById("ligneHistorique").lastChild);
+
+        tableauArboparcourue.pop();
 
         // On recompte le nombre d'enfant
         nombreEnfant = compterLesEnfants();
@@ -154,6 +159,8 @@ function reformuler(place)
         // Si le nombre d'enfant restant égale la place du lien où on a cliqué, on s'arrête là
         if(nombreEnfant == place) continuer = false;
     }
+
+    sessionStorage.setItem("arboParcourue", tableauArboparcourue.join(";"));
 
     // On modifie la valeur du niveau d'arborescence
     niveauArborescence = place;
@@ -281,7 +288,7 @@ function genererCodeHtmlListeIcones(idPere)
                 if( data.rows[i].value.pere == idPere )
                 {
                     monCodeHtmlListeIcones 
-                        += '<li><a href="_rewrite/ficheIcone/' + data.rows[i].value._id + '">' + data.rows[i].value.nom + '</a></li>';
+                        += '<li><a href="_rewrite/ficheIcone/' + data.rows[i].value._id + '" >' + data.rows[i].value.nom + '</a></li>';
                 }
             }
 
@@ -296,6 +303,12 @@ function genererCodeHtmlListeIcones(idPere)
         }
     });
 }
+
+function enregistrerEtAcceder(id)
+{
+    window.sessionStorage.setItem("idDerniereIcone", id);
+}
+
 
 function enregistrerHistorique()
 {
@@ -503,6 +516,9 @@ function montrerEncadre()
 
 function rechercher()
 {
+    var morceauURL = "";
+    if(window.location.href.indexOf('index.html') == -1) morceauURL = "../../";
+
     var recherche = document.getElementById('champRecherche').value;
     var codeHTMLRechercheUtilisateur = "";
     var codeHTMLRechercheIcone = "";
@@ -540,6 +556,7 @@ function rechercher()
 
     document.getElementById("progression").style.width = "50%";
 
+
     // On appelle la view pour les icones
     db.view("Collectikon/listeIcones",
     {
@@ -550,15 +567,18 @@ function rechercher()
             // Pour chaque utilisateur
             for(i in data.rows)
             {
+                
                 // Si l'identifiant et le mot de passe correspondent
                 if((data.rows[i].value.nom.indexOf(recherche) !== -1)&&(recherche != ""))
                 {
-                    codeHTMLRechercheIcone += "<li><a href='#'><i class='icon-chevron-right'></i>" + data.rows[i].value.nom + "</a></li>";
+                    
+                    codeHTMLRechercheIcone += "<li><a href='" + morceauURL + "_rewrite/ficheIcone/" + data.rows[i].value._id + "'><i class='icon-chevron-right'></i>" + data.rows[i].value.nom + "</a></li>";
                     decompte++;
                 }
             }
             document.getElementById("titreRechercheIcone").innerHTML = "Icônes ";
             document.getElementById("titreRechercheIcone").innerHTML += '<span class="badge badge-success">' + decompte + '</span>';
+            
             $("#listeRechercheIcone").html(codeHTMLRechercheIcone);
         },
         error: function(status){
@@ -684,7 +704,7 @@ function afficherDate()
     document.getElementById('date').value = new Date();
 }
 
-function creerIcone()
+function creerIcone2()
 {
     var titre = document.getElementById("titre").value;
 
@@ -719,10 +739,21 @@ function creerIcone()
             date : new Date().toString(),
             statut : statut.toString()
         },
-        {success: function(data){
-            //alert("enregistré");
-            window.location.href ='../../index.html';
-        }}
+        {
+            success: function(data)
+            {
+                $('#rev').val(data.rev);
+                $('form.formulaireUpload').ajaxSubmit(
+                {
+                    url: "/Collectikon/"+ data.id,
+                    async: false,
+                    success: function(response)
+                    {
+                        //window.location.href ='../../index.html';
+                    }
+                })
+            }
+        }
     );
 }
 
@@ -816,6 +847,198 @@ function afficherSecuriteMotDePasse()
 
 }
 
+function posterCommentaire()
+{   
+    var login = "";
+
+    if(verifierConnexion())
+    {
+        login = window.sessionStorage.getItem("login");
+        db = $.couch.db("collectikon");
+        db.saveDoc(
+            {
+                type : "commentaire",
+                idIcone : document.getElementById("champsCacheId").value,
+                posteur : login,
+                date : new Date(),
+                commentaire : document.getElementById("creationCommentaire").value
+            },
+            {
+                success: function()
+                {
+                    // On efface le commentaire
+                    effacerCommentaire();
+                    afficherCommentaires()
+                }
+            }
+        );
+    }
+    
+    else
+        alert("Vous devez vous connecter pour laisser un commentaire");
+
+}
+
+function afficherCommentaires()
+{
+    effacerCommentaires();
+
+    var idIcone = document.getElementById("champsCacheId").value;
+
+    // On se connecte à la base
+    db = $.couch.db("collectikon");
+
+    // On appelle la view
+    var a = db.view("Collectikon/commentaire", {
+        // En cas de succès dans la récupération des données
+        success: function(data)
+        {
+            // Pour chaque commentaire
+            for(i in data.rows)
+            {
+                // Si l'identifiant correspond
+                if(data.rows[i].value.idIcone == idIcone)
+                {
+                    document.getElementById("divCommentaires").innerHTML = '<div class="alert alert-info"><strong><u>' + data.rows[i].value.posteur + '</u></strong> : ' + data.rows[i].value.commentaire + ' <br> ' + convertirDate(data.rows[i].value.date) + '</div>' + document.getElementById("divCommentaires").innerHTML;
+                }
+            }
+        },
+        error: function(status){
+            alert("Un problème s'est produit.");
+        }
+    })
+}
+
+function effacerCommentaires()
+{
+    while(document.getElementById("divCommentaires").hasChildNodes())
+        document.getElementById("divCommentaires").removeChild(document.getElementById("divCommentaires").lastChild);
+}
+
+function effacerCommentaire()
+{
+    document.getElementById("creationCommentaire").value = "";
+}
+
+function convertirDate(date)
+{
+    var jour = date.substring(8,10);
+    var mois = date.substring(5,7);
+    var annee = date.substring(0,4);
+    return "<i>Le " + jour + "/" + mois + "/" + annee + "</i>";
+}
+
+function essai()
+{
+
+        db = $.couch.db("collectikon");
+        db.saveDoc(
+            {
+                type : "icone",
+                created_at : new Date(),
+                message : document.getElementById("message").value
+            },
+            {
+            success: function(data)
+            {
+                document.getElementById("_rev").value = data.rev;
+                $('#formulaire').ajaxSubmit(
+                {
+                    url : db.uri + $.couch.encodeDocId(data.id),
+                    success : function()
+                    {
+                        alert("l'upload s'est bien passé");
+                    }
+                });
+            }
+        });
+}
+
+function creerIcone()
+{
+
+    var formesChoisies = new Array();
+    var forme = document.getElementById("forme");
+
+    for (var i = 0; i < forme.options.length; i++)
+        if (forme.options[i].selected) formesChoisies.push(forme.options[i].value);
+
+    var couleursChoisies = new Array();
+    var couleur = document.getElementById("couleur");
+
+    for (var i = 0; i < couleur.options.length; i++)
+        if (couleur.options[i].selected) couleursChoisies.push(couleur.options[i].value);
+
+    var reg=new RegExp("[,;]+", "g");
+    var tableauRepresentations = document.getElementById("representations").value.split(reg);
+    var tableauSujets = document.getElementById("sujets").value.split(reg);
+
+        db = $.couch.db("collectikon");
+        db.saveDoc(
+            {
+                nom : document.getElementById("titre").value,
+                type : "icone",
+                forme : formesChoisies.toString(),
+                couleur : couleursChoisies.toString(),
+                representation : tableauRepresentations.toString(),
+                sujet : tableauSujets.toString(),
+                date : new Date().toString(),
+                statut : document.getElementById('statut').value,
+                pov : document.getElementById('affichagePointDeVue').value,
+                topic : document.getElementById('affichageTopic').value,
+                sstopic : formaterPourEnregistrementArborescenceParcourue(),
+                pere : identifiantPere
+            },
+            {
+            success: function(data)
+            {
+                document.getElementById("_rev").value = data.rev;
+                $('#formulaire').ajaxSubmit(
+                {
+                    url : db.uri + $.couch.encodeDocId(data.id),
+                    success : function()
+                    {
+                        alert("l'upload s'est bien passé");
+                    }
+                });
+            }
+        });
+}
+
+
+function blablabla()
+{
+    // On se connecte à la base
+    db = $.couch.db("collectikon");
+
+    // On appelle la view
+    var a = db.view("Collectikon/icone", {
+        // En cas de succès dans la récupération des données
+        success: function(data)
+        {
+            // Pour chaque commentaire
+            for(i in data.rows)
+            {
+                if(data.rows[i].value._id == document.getElementById('champsCacheId').value)
+                {
+                    for(var nomFichier in data.rows[i].value._attachments)
+                    {
+                        var url = "http://127.0.0.1:5984/collectikon/" + document.getElementById('champsCacheId').value + "/" + nomFichier;
+                        $("#upload-file-container").html("<img src='" + url + "' style='max-width: 150px;max-height: 150px'>");
+                    }
+                }
+            }
+        },
+        error: function(status){
+            alert("Un problème s'est produit.");
+        }
+    })
+
+    
+    
+    
+
+}
 
 /*
 function lancerUpload()
@@ -860,3 +1083,114 @@ var uploadFile = function(document, file)
     };
 };
 */
+
+function maFonction()
+{
+    // On se connecte à la base
+    db = $.couch.db("collectikon");
+
+    // On appelle la view
+    db.view("Collectikon/utilisateur", {
+        // En cas de succès dans la récupération des données
+        success: function(data)
+        {
+            // Pour chaque utilisateur
+            for(i in data.rows)
+            {
+                // J'affiche l'identifiant
+                alert(data.rows[i].value.login);
+            }
+        },
+        error: function(status){
+            alert("Un problème s'est produit.");
+        }
+    })
+}
+
+function enregistrerArborescenceParcourue(nouvelElement)
+{
+    // On définit un séparateur
+    var separateur = "";
+
+    var parcouru = false;
+    // Si nous avons déjà parcouru l'arbo
+    if(sessionStorage.getItem("arboParcourue") !== null)
+    {
+        parcouru = true;
+    }
+
+    if(parcouru)
+        sessionStorage.setItem("arboParcourue", sessionStorage.getItem("arboParcourue") + ";" + nouvelElement);
+
+    else
+        sessionStorage.setItem("arboParcourue", nouvelElement);
+
+}
+
+function recupererArborescenceParcourue()
+{
+    return sessionStorage.getItem("arboParcourue");
+}
+function afficherArborescenceParcourue()
+{
+    var tableauArborescenceParcourue = recupererArborescenceParcourue().split(";");
+
+    if(tableauArborescenceParcourue.length > 2)
+    {
+        for(var w = 2; w < tableauArborescenceParcourue.length; w++)
+        {
+            document.getElementById("tableArboParourue").innerHTML +=
+                '<tr>' +
+                      '<td align="right">Sous-topic</td>' +
+                      '<td>&nbsp;</td>' +
+                      '<td><input type="text" value="' + tableauArborescenceParcourue[w] + '" size="51" disabled/></td>' +
+                  '</tr>';
+        }
+    }
+    
+    document.getElementById("affichagePointDeVue").value = tableauArborescenceParcourue[0];
+
+    document.getElementById("affichageTopic").value = tableauArborescenceParcourue[1];
+
+    //alert(document.getElementById("affichagePointDeVue").value);
+
+    //alert(document.getElementById("tableArboParourue").innerHTML);
+}
+
+function formaterPourEnregistrementArborescenceParcourue()
+{
+    var tableauArborescenceParcourue = recupererArborescenceParcourue().split(";");
+
+    tableauArborescenceParcourue.shift();
+
+    tableauArborescenceParcourue.shift();
+
+    return tableauArborescenceParcourue.join(",");
+}
+
+function recupererSsTopic()
+{
+    var id = document.getElementById("champsCacheId").value;
+
+    // On se connecte à la base
+    db = $.couch.db("collectikon");
+
+    // On appelle la view
+    db.view("Collectikon/icone", {
+        // En cas de succès dans la récupération des données
+        success: function(data)
+        {
+            // Pour chaque utilisateur
+            for(i in data.rows)
+            {
+                if(data.rows[i].value._id == id)
+                {
+                    document.getElementById("affichageSsTopic").innerHTML += data.rows[i].value.sstopic.split(",").join(" > ");
+                }
+            }
+        },
+        error: function(status){
+            alert("Un problème s'est produit.");
+        }
+    })
+}

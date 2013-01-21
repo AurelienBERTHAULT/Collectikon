@@ -10,6 +10,7 @@
     <script src="/_utils/script/json2.js" type="text/javascript"></script>
     <script src="/_utils/script/jquery.js" type="text/javascript"></script>
     <script src="/_utils/script/jquery.couch.js" type="text/javascript"></script>
+    <script src="/_utils/script/jquery.form.js"></script>
     <script src="../../script/script.js" type="text/javascript"></script>
     <script src="../../script/bootstrap.min.js"></script>
     <script type="text/javascript">
@@ -18,7 +19,7 @@
 
     </script>
   </head>
-  <body>
+  <body onload="afficherCommentaires();blablabla();recupererSsTopic()">
 
         <div class="alert alert-error" id="alerteProblemeConnexion" style="position: absolute;right: 0px;top:110px;visibility: hidden;width: 36.5%">
             Votre login ou mot de passe est incorrecte.
@@ -96,24 +97,26 @@
 
         <br><br><br>
 
+        <div style="position: absolute; left:5%;width: 50%;" class="well" >
       {{#icone}}
         <form action="" method="POST">
-          <table cellpadding='0' cellspacing='0'>
+            <table cellpadding='0' cellspacing='0' width="100%">
               <tr>
                   <td>
 
                       <!-- IMAGE & TITRE -->
 
-                      <table>
+                      <table width="100%">
                           <tr>
-                              <td bgcolor="red" width="150px" height="150px" id="upload-file-container"><input type="file" id="image" name="image"/></td>
+                              <td width="45%" height="50px" id="upload-file-container" class="upload-file-container" align="center">
+                              </td>
                               <td>
-                                  <table>
+                                  <table width="100%">
                                       <tr>
                                           <td height="130px"></td>
                                       </tr>
                                       <tr>
-                                          <td height="18px" width="300px">
+                                          <td height="18px" width="55%" align="center">
                                               {{nom}}
                                           </td>
                                       </tr>
@@ -148,19 +151,19 @@
 
                       <table width="100%">
                           <tr>
-                              <td width="30%" align="right">Point de vue</td>
+                              <td width="40%" align="right">Point de vue</td>
                               <td width="10%">&nbsp;</td>
-                              <td width="60%"><input type="text" placeholder="Environnemental" size="51"/></td>
+                              <td width="50%">{{pov}}</td>
                           </tr>
                           <tr>
-                              <td width="30%" align="right">Topic principal</td>
-                              <td width="10%">&nbsp;</td>
-                              <td width="60%"><input type="text" placeholder="Transport" size="51"/></td>
+                              <td align="right">Topic principal</td>
+                              <td>&nbsp;</td>
+                              <td>{{topic}}</td>
                           </tr>
                           <tr>
-                              <td width="30%" align="right">Sous-topic</td>
-                              <td width="10%">&nbsp;</td>
-                              <td width="60%"><input type="text" placeholder="Bus" size="51"/></td>
+                              <td align="right">Sous-topic</td>
+                              <td>&nbsp;</td>
+                              <td id="affichageSsTopic"></td>
                           </tr>
                       </table>
 
@@ -170,30 +173,30 @@
 
                       <table width="100%">
                           <tr>
-                              <td width="30%" align="right">Forme</td>
+                              <td width="40%" align="right">Forme</td>
                               <td width="10%">&nbsp;</td>
-                              <td width="60%">
+                              <td width="50%">
                                   {{forme}} 
                               </td>
                           </tr>
                           <tr>
-                              <td width="30%" align="right">Couleur</td>
-                              <td width="10%">&nbsp;</td>
-                              <td width="60%">
+                              <td align="right">Couleur</td>
+                              <td>&nbsp;</td>
+                              <td>
                                   {{couleur}}
                               </td>
                           </tr>
                           <tr>
-                              <td width="30%" align="right">Représentation</td>
-                              <td width="10%">&nbsp;</td>
-                              <td width="60%">
+                              <td align="right">Représentation</td>
+                              <td>&nbsp;</td>
+                              <td>
                                   {{representation}}
                               </td>
                           </tr>
                           <tr>
-                              <td width="30%" align="right">Sujet</td>
-                              <td width="10%">&nbsp;</td>
-                              <td width="60%">
+                              <td align="right">Sujet</td>
+                              <td>&nbsp;</td>
+                              <td>
                                   {{sujet}}
                               </td>
                           </tr>
@@ -205,16 +208,16 @@
 
                       <table width="100%">
                           <tr>
-                              <td width="30%" align="right">Date de dernière modification</td>
+                              <td width="40%" align="right">Date de dernière modification</td>
                               <td width="10%">&nbsp;</td>
-                              <td width="60%">
+                              <td width="50%">
                                   {{date}}
                               </td>
                           </tr>
                           <tr>
-                              <td width="30%" align="right">Statut</td>
-                              <td width="10%">&nbsp;</td>
-                              <td width="60%">
+                              <td align="right">Statut</td>
+                              <td>&nbsp;</td>
+                              <td>
                                   {{statut}}
                               </td>
                           </tr>
@@ -222,13 +225,36 @@
                   </td>
               </tr>
           </table>
-
+            <input id="champsCacheId" type="text" value="{{id}}" style="display:none"/>
           {{/icone}}
       </form>
+  </div>
 
-      <!------------------>
-      <!-- LES ENCADRES -->
-      <!------------------>
+        <!----------------------->
+        <!-- ZONE COMMENTAIRE --->
+        <!----------------------->
+
+        <div id="divEditionAffichageCommentaires">
+            <div class="alert alert-block" >
+                  <table>
+                      <tr>
+                          <td align="center">
+                              <textarea id="creationCommentaire" placeholder="Mon commentaire" cols="50" rows="2" style="width: 100%;resize: none;"></textarea>
+                          </td>
+                          <td style="vertical-align: top">
+                              <input type="button" class="btn" value="Poster" onclick="posterCommentaire()"  />
+                          </td>
+                      </tr>
+                  </table>
+             </div>
+          <div  id="divCommentaires">
+              
+          </div>
+      </div>
+
+      <!----------------------->
+      <!-- ENCADRE RECHERCHE -->
+      <!----------------------->
 
       <div class="bs-docs-example" id="encadre" class="encadre" style="position: absolute;top: 120px;left: 0%; width: 19%; height: 400px;visibility: hidden" onmouseover="divOver = true;" onmouseout="divOver = false;cacherEncoreEncadre();">
           <div class="well" id="contenuEncadreRecherche" style="max-width: 100%; padding: 8px 0;">
@@ -251,7 +277,9 @@
           </div>
       </div>
 
-
+      <!----------------------------->
+      <!-- ENCADRE CREATION COMPTE -->
+      <!----------------------------->
 
       <div class="bs-docs-example" id="encadreCreationCompte" style="position: absolute;top: 120px;left: 60.1%; width: 38.5%;visibility: hidden">
           <div class="well" style="max-width: 100%; padding: 8px 0;">

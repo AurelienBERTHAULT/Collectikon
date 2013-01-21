@@ -1,3 +1,4 @@
+
 function(doc)
 {
     if (doc.type == "icone")
